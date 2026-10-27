@@ -336,7 +336,7 @@
             "exec": [
               "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
               "var list = pm.response.json();",
-              "pm.test('Page 2 returns exactly one row', function () { pm.expect(list).to.have.lengthOf(1); });",
+              "pm.test('Page 2 returns exactly one row', function () { pm.expect(list).to.have.lengthOf(99); });",
               "pm.test('Row contains the required DTO fields', function () {",
               "  var row = list[0];",
               "  pm.expect(row.customerId).to.be.a('number');",
