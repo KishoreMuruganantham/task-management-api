@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Task System API",
-    "description": "Hexaware API Coding Challenge - Task System. Spring Boot 3.5.16 + JWT. Run 'Login (Basic Auth)' first: it stores the JWT in the collection variable {{token}} used by every other request.",
+    "description": "Hexaware API Coding Challenge - Task System. Spring Boot 3.5.16 + JWT. Run 'Login (Basic Auth)' first: it stores the JWT in the collection variable {{token}} used by every other request. Customer policy requests expect the sample customers and policies in task_db.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -85,8 +85,9 @@
               "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
               "var list = pm.response.json();",
               "pm.test('Response is an array', function () { pm.expect(list).to.be.an('array'); });",
-              "var created = list.find(function (x) { return x.title === 'Demo Task from Postman'; });",
-              "pm.test('Created task is present', function () { pm.expect(created).to.exist; });",
+              "var matches = list.filter(function (x) { return x.title === 'Demo Task from Postman'; });",
+              "pm.test('Created task is present', function () { pm.expect(matches.length).to.be.greaterThan(0); });",
+              "var created = matches.sort(function (a, b) { return b.taskId - a.taskId; })[0];",
               "if (created) { pm.collectionVariables.set('taskId', created.taskId); }"
             ]
           }
@@ -285,6 +286,194 @@
         "method": "GET",
         "header": [],
         "url": "{{baseUrl}}/api/tasks/{{taskId}}"
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Customer Policies",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "var list = pm.response.json();",
+              "pm.test('Response is an array', function () { pm.expect(list).to.be.an('array'); });",
+              "pm.test('Returns both matching policies', function () {",
+              "  pm.expect(list).to.have.lengthOf(2);",
+              "  var names = list.map(function (x) { return x.customerName; });",
+              "  pm.expect(names).to.include.members(['Alice', 'Bob']);",
+              "});",
+              "pm.test('Rows contain the required DTO fields', function () {",
+              "  list.forEach(function (row) {",
+              "    pm.expect(row.customerId).to.be.a('number');",
+              "    pm.expect(row.customerName).to.be.a('string').and.not.empty;",
+              "    pm.expect(row.policyTitle).to.eql('Health Shield');",
+              "    pm.expect(row.tenure).to.eql('ONE_YEAR');",
+              "    pm.expect(row.type).to.be.oneOf(['THIRD_PARTY', 'COMPREHENSIVE']);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/customer-policies/filter?tenure=ONE_YEAR&title=Health%20Shield&page=0&size=10",
+        "description": "Returns customers and policy details for a given tenure and exact policy title. Requires the sample customers/policies in task_db."
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Customer Policies (Page 2)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "var list = pm.response.json();",
+              "pm.test('Page 2 returns exactly one row', function () { pm.expect(list).to.have.lengthOf(1); });",
+              "pm.test('Row contains the required DTO fields', function () {",
+              "  var row = list[0];",
+              "  pm.expect(row.customerId).to.be.a('number');",
+              "  pm.expect(row.customerName).to.be.a('string').and.not.empty;",
+              "  pm.expect(row.policyTitle).to.eql('Health Shield');",
+              "  pm.expect(row.tenure).to.eql('ONE_YEAR');",
+              "  pm.expect(row.type).to.be.oneOf(['THIRD_PARTY', 'COMPREHENSIVE']);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/customer-policies/filter?tenure=ONE_YEAR&title=Health%20Shield&page=1&size=1",
+        "description": "Verifies pagination: page=1, size=1 returns the second matching row."
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Customer Policies - Missing Tenure (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Error message is returned', function () {",
+              "  pm.expect(pm.response.json().message).to.eql('tenure is required');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/customer-policies/filter?title=Health%20Shield&page=0&size=10",
+        "description": "tenure is required. The service must return 400, not an empty array."
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Customer Policies - Missing Title (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Error message is returned', function () {",
+              "  pm.expect(pm.response.json().message).to.eql('title is required');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/customer-policies/filter?tenure=ONE_YEAR&page=0&size=10",
+        "description": "title is required. A blank or absent title must return 400."
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Customer Policies - Invalid Page (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Error message is returned', function () {",
+              "  pm.expect(pm.response.json().message).to.eql('page must be greater than or equal to 0');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/customer-policies/filter?tenure=ONE_YEAR&title=Health%20Shield&page=-1&size=10",
+        "description": "page must be greater than or equal to 0."
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Customer Policies - Invalid Size (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Error message is returned', function () {",
+              "  pm.expect(pm.response.json().message).to.eql('size must be between 1 and 100');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/customer-policies/filter?tenure=ONE_YEAR&title=Health%20Shield&page=0&size=0",
+        "description": "size must be between 1 and 100."
+      },
+      "response": []
+    },
+    {
+      "name": "Filter Customer Policies - No Token (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 401 without a token', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/customer-policies/filter?tenure=ONE_YEAR&title=Health%20Shield&page=0&size=10",
+        "description": "The endpoint requires a valid JWT."
       },
       "response": []
     }

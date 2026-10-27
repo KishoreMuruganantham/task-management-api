@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT,"/api/tasks/{id}").hasAnyAuthority("EMPLOYEE","ADMIN")
                         .requestMatchers(HttpMethod.DELETE,"/api/tasks/{id}").hasAnyAuthority("EMPLOYEE","ADMIN")
                         .requestMatchers(HttpMethod.GET,"/api/employees").hasAnyAuthority("EMPLOYEE","ADMIN")
+                        .requestMatchers(HttpMethod.GET,"/api/customer-policies/filter").hasAnyAuthority("EMPLOYEE","ADMIN")
                         .anyRequest().authenticated()
                 );
         // Add jwt filter before Spring's Auth Filter
